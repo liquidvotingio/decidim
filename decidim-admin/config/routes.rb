@@ -96,7 +96,7 @@ Decidim::Admin::Engine.routes.draw do
 
     resources :share_tokens, only: :destroy
 
-    resources :conflicts, only: [:index, :edit], controller: "conflicts"
+    resources :conflicts, only: [:index, :edit, :update], controller: "conflicts"
 
     root to: "dashboard#show"
   end
