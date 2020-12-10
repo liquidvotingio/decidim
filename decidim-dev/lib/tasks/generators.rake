@@ -49,4 +49,18 @@ namespace :decidim do
       )
     end
   end
+
+  desc "Generates a stateless demo app for dockerization"
+  task :generate_stateless_demo_app do
+    Bundler.with_original_env do
+      generate_decidim_app(
+        "staging_app",
+        "--app_name",
+        "staging_app",
+        "--path",
+        "..",
+        "--demo"
+      )
+    end
+  end
 end

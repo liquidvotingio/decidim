@@ -1,0 +1,62 @@
+name: "Deploy PR to staging"
+
+on:
+  pull_request:
+    branches: ['lv/staging']
+
+jobs:
+  build-publish:
+    name: Build & Publish Staging Image
+    runs-on: ubuntu-latest
+  
+    # TODO: tag with feature branch name?
+    env:
+      STAGING_IMAGE_NAME: ghcr.io/liquidvotingio/decidim-staging
+      TAG: ${{ github.sha }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set Ruby Version
+      id: ruby-version
+      run: |
+        echo ::set-output name=version::$(cat .ruby-version)
+
+    - name: Build decidim-staging Image
+      env:
+        RUBY_VERSION: ${{ steps.ruby-version.outputs.version }}
+      run: |
+        docker build \
+        --build-arg ruby_version=$RUBY_VERSION \
+        -t $STAGING_IMAGE_NAME:$TAG .
+        docker tag $STAGING_IMAGE_NAME:$TAG $STAGING_IMAGE_NAME:latest
+
+    - name: Publish decidim-staging Image to Github Container Registry
+      uses: azure/docker-login@v1
+      with:
+        login-server: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.CONTAINER_REGISTRY_PAT }}
+    - run: |
+        docker push $STAGING_IMAGE_NAME
+
+  deploy:
+    name: Deploy to Linode
+    needs: [build-publish]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: Deploy
+      env:
+        KUBE_CONFIG_DATA: ${{ secrets.LINODE_KUBE_CONFIG }}
+      run: |
+        echo "$KUBE_CONFIG_DATA" | base64 --decode > /tmp/config
+        export KUBECONFIG=/tmp/config
+        kubectl rollout restart deployment/decidim-staging-deployment
+        kubectl rollout status deployment/decidim-staging-deployment
+        pod=$(kubectl get pods -l app=decidim-staging  -o json | jq -r '.items[].metadata.name' | head -1)
+        kubectl wait --timeout=120s --for=condition=Ready pod/$pod
+        kubectl exec pod/$pod -- bundle exec rails db:environment:set RAILS_ENV=development
+        kubectl exec pod/$pod -- bundle exec rails db:migrate:reset
+        kubectl exec pod/$pod -- bundle exec rails db:seed
+
