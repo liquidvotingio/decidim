@@ -54,9 +54,8 @@ jobs:
         export KUBECONFIG=/tmp/config
         kubectl rollout restart deployment/decidim-staging-deployment
         kubectl rollout status deployment/decidim-staging-deployment
-        pod=$(kubectl get pods -l app=decidim-staging  -o json | jq -r '.items[].metadata.name' | head -1)
-        kubectl wait --timeout=120s --for=condition=Ready pod/$pod
-        kubectl exec pod/$pod -- bundle exec rails db:environment:set RAILS_ENV=development
-        kubectl exec pod/$pod -- bundle exec rails db:migrate:reset
-        kubectl exec pod/$pod -- bundle exec rails db:seed
-
+        # pod=$(kubectl get pods -l app=decidim-staging  -o json | jq -r '.items[].metadata.name' | head -1)
+        # kubectl wait --timeout=120s --for=condition=Ready pod/$pod
+        # kubectl exec pod/$pod -- bundle exec rails db:environment:set RAILS_ENV=development
+        # kubectl exec pod/$pod -- bundle exec rails db:migrate:reset
+        # kubectl exec pod/$pod -- bundle exec rails db:seed
